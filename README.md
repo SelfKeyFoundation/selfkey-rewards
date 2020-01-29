@@ -1,4 +1,4 @@
-# {{name}}
+# selfkey-rewards
 
 {{description}}
 

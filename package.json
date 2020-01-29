@@ -1,5 +1,5 @@
 {
-  "name": "{{name}}",
+  "name": "selfkey-rewards",
   "version": "0.0.1",
   "description": "{{description}}",
   "author": "",
@@ -9,6 +9,7 @@
     "lint:sol": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
+    "@nomiclabs/buidler": "^1.1.2",
     "dotenv": "^8.0.0",
     "solhint": "^1.5.1",
     "solidity-coverage": "^0.6.0-beta.3",
@@ -16,6 +17,6 @@
   },
   "dependencies": {
     "ethereumjs-util": "^6.1.0",
-    "openzeppelin-solidity": "^2.2.0"
+    "openzeppelin-solidity": "^2.4.0"
   }
 }
