@@ -27,20 +27,20 @@ contract RewardsPool {
         staking = StakingVault(_staking);
     }
 
-    function random() public view returns (uint256) {
+    function random() internal view returns (uint256) {
         return uint256(keccak256(abi.encodePacked(block.number, block.difficulty, nonce)));
     }
 
-    function getRandomLimit() public view returns (uint256) {
+    function getRandomLimit() internal view returns (uint256) {
         //nonce++;
         uint256 limit = staking.getTotalStake();
-        require(limit > 0, "limit must be above zero");
         return random() % limit;
     }
 
     function allocateReward() public returns (address) {
         require(token.balanceOf(address(this)) >= rewardSize, "not enough funds in the contract");
         require(now >= lastReward + rewardWindow, "cannot trigger reward yet");
+
         lastReward = now;
         uint256 randomLimit = getRandomLimit();
         address winner = staking.getAddressbyWeightedSelection(randomLimit);

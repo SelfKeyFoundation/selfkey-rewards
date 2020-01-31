@@ -53,7 +53,14 @@ module.exports = {
       // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
       // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     },
-
+    mainnet: {
+      provider: () => MainnetProvider,
+      network_id: 1,
+      //from: addresses[0],
+      gas: 7500000,
+      gasPrice: 8000000000, // 8 gwei
+      //skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    }
     // Useful for private networks
     // private: {
       // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
@@ -80,5 +87,7 @@ module.exports = {
       //  evmVersion: "byzantium"
       // }
     }
-  }
+  },
+
+  plugins: ["solidity-coverage"]
 }

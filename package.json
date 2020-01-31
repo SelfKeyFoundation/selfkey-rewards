@@ -5,18 +5,22 @@
   "author": "",
   "scripts": {
     "test": "truffle test",
-    "test:cov": "solidity-coverage",
+    "test:cov": "truffle run coverage",
     "lint:sol": "solhint contracts/**/*.sol"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.1.2",
+    "@nomiclabs/buidler-truffle5": "^1.1.2",
+    "@nomiclabs/buidler-web3": "^1.1.2",
     "dotenv": "^8.0.0",
     "solhint": "^1.5.1",
-    "solidity-coverage": "^0.6.0-beta.3",
-    "truffle-hdwallet-provider": "^1.0.5"
+    "solidity-coverage": "^0.7.1",
+    "truffle-hdwallet-provider": "^1.0.5",
+    "solc": "0.4.19"
   },
   "dependencies": {
     "ethereumjs-util": "^6.1.0",
-    "openzeppelin-solidity": "^2.4.0"
+    "openzeppelin-solidity": "^2.4.0",
+    "selfkey-token": "^1.1.1"
   }
 }

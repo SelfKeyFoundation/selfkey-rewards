@@ -1,7 +1,5 @@
 pragma solidity ^0.5.3;
 
-//import './SelfKeyToken.sol';
-//import "selfkey-token/contracts/SelfKeyToken.sol";
 import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 import 'openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol';
 import 'openzeppelin-solidity/contracts/token/ERC20/ERC20.sol';
@@ -29,13 +27,14 @@ contract StakingVault {
         if(balances[msg.sender] == 0) {
             indexes.push(msg.sender);
         }
+        
         balances[msg.sender] += amount;
         totalStake = totalStake + amount;
         token.transferFrom(msg.sender, address(this), amount);
         emit KEYStaked(msg.sender, amount);
     }
 
-    function getAddressByIndex(uint256 index) public view returns (address) {
+    /*function getAddressByIndex(uint256 index) public view returns (address) {
         require(indexes[index] != address(0), "invalid index");
         return indexes[index];
     }
@@ -43,7 +42,7 @@ contract StakingVault {
     function getBalanceByIndex(uint256 index) public view returns (uint256) {
         require(indexes[index] != address(0), "invalid index");
         return balances[indexes[index]];
-    }
+    }*/
 
     function getTotalStake() public view returns (uint256) {
         return totalStake;
