@@ -10,7 +10,6 @@ contract StakingVault {
     using SafeMath for uint256;
 
     ERC20 public token;
-    //uint256 public depositSize = 100;
 
     DIDLedger public ledger;
     mapping(bytes32 => uint256) public balances;
@@ -26,12 +25,12 @@ contract StakingVault {
 
     function deposit(uint256 amount, bytes32 did) public {
         require(amount > 0, "Deposit amount must be greater than zero");
-        require(ledger.getController(did) == msg.sender, "sender is not controller of DID");
+        //require(ledger.getController(did) == msg.sender, "sender is not controller of DID");
 
         if(balances[did] == 0) {
             indexes.push(did);
         }
-        
+
         balances[did] += amount;
         totalStake = totalStake + amount;
         token.transferFrom(msg.sender, address(this), amount);
@@ -42,18 +41,26 @@ contract StakingVault {
         return totalStake;
     }
 
-    function getDIDbyWeightedSelection(uint256 random) public view returns (bytes32) {
-        require(totalStake > 0, "total stake must be above zero");
-        require(random <= totalStake, "random number must be less than total stake");
+    function getDIDCount() public view returns (uint256) {
+        return indexes.length;
+    }
 
-        uint256 limit = random;
+    function getIndexes() public view returns (bytes32[] memory) {
+        return indexes;
+    }
+
+    function balanceOf(bytes32 did) public view returns (uint256) {
+        return balances[did];
+    }
+
+    function getDIDByStakeNumber(uint256 stakeNumber) public view returns (bytes32) {
+        require(stakeNumber < totalStake, "invalid stakeNumber specified for weighted selection");
         uint256 i = 0;
-
-        while(balances[indexes[i]] < limit) {
-            limit = limit - balances[indexes[i]];
+        uint256 selector = stakeNumber;
+        while(balances[indexes[i]] < selector) {
+            selector = selector - balances[indexes[i]];
             i++;
         }
-
         return indexes[i];
     }
 }

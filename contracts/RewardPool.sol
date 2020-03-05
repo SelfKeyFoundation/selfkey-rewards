@@ -11,7 +11,7 @@ import 'openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol';
 /**
  *  SelfKey Semi-automated Rewards Pool (beta)
  */
-contract RewardsPool is Ownable {
+contract RewardPool is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
 
@@ -19,12 +19,11 @@ contract RewardsPool is Ownable {
     StakingVault public staking;
     DIDLedger public ledger;
 
-    uint256 public nonce = 0;
     uint256 public lastReward = 0;
     uint256 public rewardSize = 1;
     uint256 public rewardWindow = 30 days;
 
-    event RewardAllocated(address winnerAddress, bytes32 winnerDID, uint256 amount, uint256 random);
+    event RewardAllocated(address winnerAddress, uint256 amount);
 
     constructor(
         address _token,
@@ -42,14 +41,7 @@ contract RewardsPool is Ownable {
         rewardWindow = _rewardWindow;
     }
 
-    function random() internal view returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(block.number, block.difficulty, nonce)));
-    }
-
-    function getRandomLimit() internal view returns (uint256) {
-        //nonce++;
-        uint256 limit = staking.getTotalStake();
-        return random() % limit;
+    function allocateReward() internal returns (address) {
     }
 
     function setRewardSize(uint256 _newSize) public onlyOwner {
@@ -61,21 +53,22 @@ contract RewardsPool is Ownable {
         rewardWindow = _newWindow;
     }
 
-    function allocateReward() public returns (bytes32) {
+    function withdrawFunds(uint256 amount) public onlyOwner {
+        token.safeTransfer(msg.sender, amount);
+    }
+
+    function doAllocate() public returns (bool) {
         require(token.balanceOf(address(this)) >= rewardSize, "not enough funds in the contract");
         require(now >= lastReward + rewardWindow, "cannot trigger reward yet");
 
         lastReward = now;
-        uint256 randomLimit = getRandomLimit();
-        bytes32 winnerDID = staking.getDIDbyWeightedSelection(randomLimit);
-        address winnerAddress = ledger.getController(winnerDID);
-        token.safeTransfer(winnerAddress, rewardSize);
-        emit RewardAllocated(winnerAddress, winnerDID, rewardSize, randomLimit);
+        address winnerAddress = allocateReward();
 
-        return winnerDID;
-    }
+        if(winnerAddress != address(0)) {
+            token.safeTransfer(winnerAddress, rewardSize);
+        }
 
-    function withdraw(uint256 amount) public onlyOwner {
-        token.safeTransfer(msg.sender, amount);
+        emit RewardAllocated(winnerAddress, rewardSize);
+        return true;
     }
 }

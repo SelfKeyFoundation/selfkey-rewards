@@ -1,0 +1,93 @@
+//const helper = require("./utils/truffleTestHelper");
+const assertThrows = require("./utils/assertThrows")
+const helper = require("./utils/truffleTestHelper");
+const txHelpers = require("./utils/txHelpers")
+const util = require("ethereumjs-util")
+
+const StakingVault = artifacts.require('./StakingVault.sol')
+const MockToken = artifacts.require('./MockToken.sol')
+const PredictiveRewardPool = artifacts.require('./PredictiveRewardPool.sol')
+const DIDLedger = artifacts.require('./DIDLedger.sol')
+
+const zeroBytes = util.bufferToHex(util.setLengthLeft(0, 32))
+
+contract('RandomRewardPool', accounts => {
+  const [user1, user2, user3] = accounts.slice(0)
+  let staking, token, rewards, ledger
+  let did1, did2, did3
+
+  const createDID = async (user) => {
+    let tx = await ledger.createDID(zeroBytes, { from: user })
+    let log = txHelpers.getLog(tx, "CreatedDID")
+    return log.args.id
+  }
+
+  before(async () => {
+    let reward = 10000
+    let period = 0
+
+    ledger = await DIDLedger.new()
+    assert.notEqual(ledger, undefined)
+
+    token = await MockToken.new()
+    assert.notEqual(token, undefined)
+    
+    staking = await StakingVault.new(token.address, ledger.address)
+    assert.notEqual(staking, undefined)
+
+    rewards = await PredictiveRewardPool.new(token.address, staking.address, ledger.address, reward, period)
+    assert.notEqual(rewards, undefined)
+
+    // initialize senders' funds
+    await token.freeMoney(user1, 999999)
+    await token.freeMoney(user2, 999999)
+    await token.freeMoney(user3, 999999)
+
+    await token.approve(staking.address, 999999, { from: user1 })
+    await token.approve(staking.address, 999999, { from: user2 })
+    await token.approve(staking.address, 999999, { from: user3 })
+
+    did1 = await createDID(user1)
+    did2 = await createDID(user2)
+    did3 = await createDID(user3)
+    
+    await staking.deposit(1000, did1, { from: user1 })
+    await staking.deposit(5000, did2, { from: user2 })
+    await staking.deposit(500, did2, { from: user2 })   // to cover all test branches
+    await staking.deposit(4000, did3, { from: user3 })
+  })
+
+  context('Reward allocation', () => {
+    it("reverts on insufficient funds in rewards contract", async () => {
+      await assertThrows(rewards.doAllocate({ from: user1 }))
+    })
+
+    it("allocates reward", async () => {
+      await token.freeMoney(rewards.address, 20000000)  // load contract with funds
+
+      let allowance1 = await rewards.getAllowance(did1)
+      let allowance2 = await rewards.getAllowance(did2)
+      let allowance3 = await rewards.getAllowance(did3)
+      
+      let tx = await rewards.doAllocate({ from: user1 })
+
+      let allowance1b = await rewards.getAllowance(did1)
+      let allowance2b = await rewards.getAllowance(did2)
+      let allowance3b = await rewards.getAllowance(did3)
+
+      assert.isAbove(Number(allowance1b), Number(allowance1))
+      assert.isAbove(Number(allowance2b), Number(allowance2))
+      assert.isAbove(Number(allowance3b), Number(allowance3))
+    })
+
+    it("allows stakeholders to withdraw reward up to allowance", async () => {
+      let allowance1 = Number(await rewards.getAllowance(did1))
+      await assertThrows(rewards.withdrawReward(allowance1 + 1, did1, { from: user1 })) 
+      await assertThrows(rewards.withdrawReward(allowance1 - 1, did1, { from: user2 })) 
+      let withdrawal = allowance1 / 2
+      await rewards.withdrawReward(withdrawal, did1, { from: user1 })
+      let allowance2 = Number(await rewards.getAllowance(did1))
+      assert.equal(allowance2, allowance1 - withdrawal)
+    })
+  })
+})

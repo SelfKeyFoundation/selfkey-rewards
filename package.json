@@ -13,10 +13,12 @@
     "@nomiclabs/buidler-truffle5": "^1.1.2",
     "@nomiclabs/buidler-web3": "^1.1.2",
     "dotenv": "^8.0.0",
+    "everpolate": "0.0.3",
+    "mochawesome": "^4.1.0",
+    "solc": "0.4.19",
     "solhint": "^1.5.1",
     "solidity-coverage": "^0.7.1",
-    "truffle-hdwallet-provider": "^1.0.5",
-    "solc": "0.4.19"
+    "truffle-hdwallet-provider": "^1.0.5"
   },
   "dependencies": {
     "ethereumjs-util": "^6.1.0",
