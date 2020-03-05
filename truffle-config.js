@@ -10,7 +10,7 @@ const ropstenURL = "https://ropsten.infura.io/v3/" + infuraKey
 const walletPath = "./local/wallet.json"  // Should be JSON file where "mnemonic" is found
 const { mnemonic } = JSON.parse(fs.readFileSync(walletPath))
 
-const MainnetProvider = new HDWalletProvider(mnemonic, mainnetURL)
+const MainnetProvider = new HDWalletProvider(mnemonic, mainnetURL, 0, 5)
 const RopstenProvider = new HDWalletProvider(mnemonic, ropstenURL)
 
 module.exports = {
@@ -53,7 +53,14 @@ module.exports = {
       // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
       // skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     },
-
+    mainnet: {
+      provider: () => MainnetProvider,
+      network_id: 1,
+      //from: addresses[0],
+      gas: 7500000,
+      gasPrice: 8000000000, // 8 gwei
+      //skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    }
     // Useful for private networks
     // private: {
       // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
@@ -80,5 +87,10 @@ module.exports = {
       //  evmVersion: "byzantium"
       // }
     }
+  },
+
+  plugins: ["solidity-coverage"],
+  mocha: {
+    enableTimeouts: false
   }
 }

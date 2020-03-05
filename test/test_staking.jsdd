@@ -1,0 +1,142 @@
+//const helper = require("./utils/truffleTestHelper");
+const assertThrows = require("./utils/assertThrows")
+const helper = require("./utils/truffleTestHelper");
+const txHelpers = require("./utils/txHelpers")
+const util = require("ethereumjs-util")
+
+const StakingVault = artifacts.require('./StakingVault.sol')
+const CappedStakingVault = artifacts.require('./CappedStakingVault.sol')
+const MockToken = artifacts.require('./MockToken.sol')
+const RandomRewardPool = artifacts.require('./RandomRewardPool.sol')
+const DIDLedger = artifacts.require('./DIDLedger.sol')
+
+const zeroBytes = util.bufferToHex(util.setLengthLeft(0, 32))
+
+contract('StakingVault', accounts => {
+  const [user1, user2, user3, user4, user5, whitelisted1] = accounts.slice(0)
+  let staking, cappedStaking, token, rewards, ledger
+  let did1, did2, did3, did4, did5
+
+  const createDID = async (user) => {
+    let tx = await ledger.createDID(zeroBytes, { from: user })
+    let log = txHelpers.getLog(tx, "CreatedDID")
+    return log.args.id
+  }
+
+  before(async () => {
+    ledger = await DIDLedger.new()
+    assert.notEqual(ledger, undefined)
+
+    token = await MockToken.new()
+    assert.notEqual(token, undefined)
+    
+    staking = await StakingVault.new(token.address, ledger.address)
+    assert.notEqual(staking, undefined)
+
+    // initialize senders' funds
+    await token.freeMoney(user1, 999999)
+    await token.freeMoney(user2, 999999)
+    await token.freeMoney(user4, 999999)
+    await token.freeMoney(user5, 999999)
+
+    await token.approve(staking.address, 999999, { from: user2 })
+    await token.approve(staking.address, 999999, { from: user4 })
+    await token.approve(staking.address, 999999, { from: user5 })
+
+    did1 = await createDID(user1)
+    did2 = await createDID(user2)
+    did3 = await createDID(user3)
+    did4 = await createDID(user4)
+    did5 = await createDID(user5)    
+  })
+
+  context('Deposits', () => {
+    it("sender that has not approved can't deposit KEY", async () => {
+      await assertThrows(staking.deposit(1000, did1, { from: user1 }))
+    })
+
+    it("sender without funds can't deposit KEY", async () => {
+      await assertThrows(staking.deposit(2000, did3, { from: user3 }))
+    })
+
+    it("sender cannot attempt to deposit zero KEY", async () => {
+      await assertThrows(staking.deposit(0, did2, { from: user2 }))
+    })
+
+    it("sender with approved amount of KEY can deposit", async () => {
+      let amount = 1000
+      let tx = await staking.deposit(amount, did2, { from: user2 })
+      let depositBalance = await staking.balances.call(did2)
+      let indexTest = await staking.indexes.call(0)
+
+      assert.equal(indexTest, did2)
+      assert.notEqual(txHelpers.getLog(tx, "KEYStaked"), null)
+      assert.equal(Number(depositBalance), amount)
+
+      // additional stakes for reward testing
+      await staking.deposit(5000, did4, { from: user4 })
+      await staking.deposit(500, did4, { from: user4 })   // to cover all test branches
+      await staking.deposit(4000, did5, { from: user5 })
+    })
+  })
+
+  context('Capped deposits', () => {
+    it("instantiates vault properly", async () => {
+      let initialCap = 100
+      cappedStaking = await CappedStakingVault.new(token.address, ledger.address, initialCap)
+      assert.notEqual(cappedStaking, undefined)
+      assert.isTrue(await cappedStaking.isWhitelistAdmin(accounts[0]))
+
+      await token.approve(cappedStaking.address, 999999, { from: user2 })
+    })
+
+    it("admin (only) can change the initial cap", async () => {
+      let newCap = 150
+      await assertThrows(cappedStaking.setInitialCap(newCap, { from: user2 }))
+      await cappedStaking.setInitialCap(newCap)
+      let cap = await cappedStaking.initialCap.call()
+      assert.equal(cap, newCap)
+    })
+
+    it("does not allow staking below initial cap", async () => {
+      let amount = 5
+      await assertThrows(cappedStaking.deposit(amount, did2, { from: user2 }))
+    })
+
+    it("sender with approved amount of KEY can deposit", async () => {
+      let amount = await cappedStaking.initialCap.call()
+      let tx = await cappedStaking.deposit(amount, did2, { from: user2 })
+      let depositBalance = await cappedStaking.balances.call(did2)
+      let indexTest = await cappedStaking.indexes.call(0)
+
+      assert.equal(indexTest, did2)
+      assert.notEqual(txHelpers.getLog(tx, "KEYStaked"), null)
+      assert.equal(Number(depositBalance), amount)
+    })
+    
+    it("cannot stake above cap", async () => {
+      let amount = 1
+      await assertThrows(cappedStaking.deposit(amount, did2, { from: user2 }))
+    })
+
+    it("can add whitelisted addresses", async () => {
+      await cappedStaking.addWhitelisted(whitelisted1, { from: accounts[0]})
+      assert.isTrue(await cappedStaking.isWhitelisted(whitelisted1))
+    })
+
+    it("whitelisted addresses can increase staking cap for DIDs", async () => {
+      let cap = await cappedStaking.caps.call(did2)
+      let newCap = 5000
+      let balance1 = await cappedStaking.balances.call(did2)
+
+      await assertThrows(cappedStaking.increaseCap(did2, newCap, { from: user3 }))
+      await cappedStaking.increaseCap(did2, newCap, { from: whitelisted1 })
+      cap = await cappedStaking.caps.call(did2)
+      assert.equal(cap, newCap)
+
+      await cappedStaking.deposit(1000, did2, { from: user2 })
+      let balance2 = await cappedStaking.balances.call(did2)
+      assert.isAbove(Number(balance2), Number(balance1))
+    })
+  })
+})
