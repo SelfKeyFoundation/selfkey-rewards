@@ -104,6 +104,13 @@ Both contracts can still be optimized for more efficiency. However, a potential 
 
 **Notes**: The current status of these smart contracts doesn't account for any decision been made on general token economics or the release of the beta program yet. These are (currently) technical tests. Due analysis is still required to define a model that aligns stakeholders' incentives and satisfies SelfKey's general vision.
 
+## Next (To-do):
+
+* Implement "non-loop" version of predictive reward contract (wouldn't have gas problems, would require a few (yet unknown) changes to the reward logic.
+* Implement fail-safe for gas limits for random rewards (tentatively "state-machine" solution).
+* Re-iterate over the general token model and identify the desired features and properties for a beta release.
+* Go back to smart contracts and make the necessary adjustments.
+
 ## Contributing
 
 Please see the [contributing notes](CONTRIBUTING.md).
